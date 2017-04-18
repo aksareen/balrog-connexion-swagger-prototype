@@ -1,4 +1,5 @@
 import json
+import connexion
 
 from sqlalchemy.sql.expression import null
 
@@ -27,8 +28,8 @@ class RulesAPIView(AdminView):
         # to exist, which doesn't make sense for GET requests.
         where = {}
         for field in ("product",):
-            if request.args.get(field):
-                where[field] = request.args[field]
+            if connexion.request.args.get(field):
+                where[field] = connexion.request.args[field]
 
         rules = dbo.rules.getOrderedRules(where=where)
         count = 0
@@ -39,6 +40,7 @@ class RulesAPIView(AdminView):
                 for key, value in rule.items()
             ))
             count += 1
+        # return dict(count=count, rules=_rules)
         return jsonify(count=count, rules=_rules)
 
     # changed_by is available via the requirelogin decorator
@@ -49,12 +51,41 @@ class RulesAPIView(AdminView):
         releaseNames = dbo.releases.getReleaseNames()
         form.mapping.choices = [(item['name'], item['name']) for item in releaseNames]
         form.mapping.choices.insert(0, ('', 'NULL'))
+        # print "request data: ", request.data
+        # print "request.data Type: ", type(request.data)
+        # print "request json: ", request.json
+        # print "request.json Type: ", type(request.json)
 
-        if not form.validate():
+        '''if not form.validate():
             self.log.warning("Bad input: %s", form.errors)
-            return Response(status=400, response=json.dumps(form.errors))
+            return Response(status=400, response=json.dumps(form.errors))'''
 
-        what = dict(backgroundRate=form.backgroundRate.data,
+        # Replaces wtfForms validations
+        nullable_field_dict = dict()
+        for key in request.json:
+            nullable_field_dict[key] = None if request.json[key] == '' else request.json[key]
+
+        what = dict(backgroundRate=nullable_field_dict.get('backgroundRate'),
+                    mapping=nullable_field_dict.get('mapping'),
+                    fallbackMapping=nullable_field_dict.get('fallbackMapping'),
+                    priority=nullable_field_dict.get('priority'),
+                    alias=nullable_field_dict.get('alias'),
+                    product=nullable_field_dict.get('product'),
+                    version=nullable_field_dict.get('version'),
+                    buildID=nullable_field_dict.get('buildID'),
+                    channel=nullable_field_dict.get('channel'),
+                    locale=nullable_field_dict.get('locale'),
+                    distribution=nullable_field_dict.get('distribution'),
+                    buildTarget=nullable_field_dict.get('buildTarget'),
+                    osVersion=nullable_field_dict.get('osVersion'),
+                    systemCapabilities=nullable_field_dict.get('systemCapabilities'),
+                    distVersion=nullable_field_dict.get('distVersion'),
+                    whitelist=nullable_field_dict.get('whitelist'),
+                    comment=nullable_field_dict.get('comment'),
+                    update_type=nullable_field_dict.get('update_type'),
+                    headerArchitecture=nullable_field_dict.get('headerArchitecture')
+                    )
+        """what = dict(backgroundRate=form.backgroundRate.data,
                     mapping=form.mapping.data,
                     fallbackMapping=form.fallbackMapping.data,
                     priority=form.priority.data,
@@ -72,7 +103,7 @@ class RulesAPIView(AdminView):
                     whitelist=form.whitelist.data,
                     comment=form.comment.data,
                     update_type=form.update_type.data,
-                    headerArchitecture=form.headerArchitecture.data)
+                    headerArchitecture=form.headerArchitecture.data)"""
         rule_id = dbo.rules.insert(changed_by=changed_by, transaction=transaction, **what)
         return Response(status=200, response=str(rule_id))
 

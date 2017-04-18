@@ -143,8 +143,11 @@ class TestRulesAPI_JSON(ViewTest):
         # is done before what we're testing
         ret = self._post('/rules', data=dict({'product': 'a'}))
         self.assertEquals(ret.status_code, 400, "Status Code: %d, Data: %s" % (ret.status_code, ret.data))
-        self.assertTrue('backgroundRate' in ret.data, msg=ret.data)
-        self.assertTrue('priority' in ret.data, msg=ret.data)
+        # Connexion and manual request.json validation methods will preempt and throw 400 error as
+        # soon as the first field invalidates. Only one field may be present in the response.data depending
+        # upon the order of fields sorted in swagger yaml file and in views.
+        # self.assertTrue('backgroundRate' in ret.data, msg=ret.data)
+        # self.assertTrue('priority' in ret.data, msg=ret.data)
 
     def testVersionValidation(self):
         for op in operators:
